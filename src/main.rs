@@ -9,17 +9,33 @@ struct BoardShape {
 }
 
 impl BoardShape {
+    fn from_rect(x1: f32, y1: f32, x2: f32, y2: f32) -> Self {
+        let length = f32::min(x2 - x1, y2 - y1);
+        Self {
+            corner_x: (x1 + x2 - length) / 2.0,
+            corner_y: (y1 + y2 - length) / 2.0,
+            length,
+        }
+    }
     fn get_cell_size(&self) -> f32 {
         self.length / BOARD_SIZE as f32
     }
+    fn get_circle_radius(&self) -> f32 {
+        self.get_cell_size() * 0.4
+    }
     fn px_to_coord(&self, x: f32, y: f32) -> Option<(i32, i32)> {
-        let coord_x = ((x - self.corner_x) / self.get_cell_size()) as i32;
-        let coord_y = ((y - self.corner_y) / self.get_cell_size()) as i32;
+        let cell_size = self.get_cell_size();
+        let coord_x = ((x - self.corner_x) / cell_size) as i32;
+        let coord_y = ((y - self.corner_y) / cell_size) as i32;
         if coord_x >= 0 && coord_x < BOARD_SIZE && coord_y >= 0 && coord_y < BOARD_SIZE {
-            Some((coord_x, coord_y))
-        } else {
-            None
+            let (center_x, center_y) = self.coord_to_px(coord_x, coord_y);
+            if f32::powi(center_x - x, 2) + f32::powi(center_y - y, 2)
+                < f32::powi(self.get_circle_radius(), 2)
+            {
+                return Some((coord_x, coord_y));
+            }
         }
+        None
     }
     fn coord_to_px(&self, coord_x: i32, coord_y: i32) -> (f32, f32) {
         (
@@ -34,6 +50,7 @@ async fn main() {
     let background_color = Color::from_rgba(245, 193, 71, 255);
     let text_bottom = 40.0;
     let line_thickness = 2.0;
+    let pending_move_white = Color::from_rgba(255, 255, 255, 100);
     loop {
         clear_background(background_color);
         draw_text(
@@ -43,11 +60,7 @@ async fn main() {
             text_bottom,
             BLACK,
         );
-        let board_shape = BoardShape {
-            corner_x: 0.0,
-            corner_y: text_bottom,
-            length: f32::min(screen_width(), screen_height() - text_bottom),
-        };
+        let board_shape = BoardShape::from_rect(0.0, text_bottom, screen_width(), screen_height());
         for i in 0..BOARD_SIZE {
             let (x1, y1) = board_shape.coord_to_px(i, 0);
             let (x2, y2) = board_shape.coord_to_px(i, BOARD_SIZE - 1);
@@ -57,6 +70,16 @@ async fn main() {
             let (x1, y1) = board_shape.coord_to_px(0, i);
             let (x2, y2) = board_shape.coord_to_px(BOARD_SIZE - 1, i);
             draw_line(x1, y1, x2, y2, line_thickness, BLACK);
+        }
+        let (mouse_x, mouse_y) = mouse_position();
+        if let Some((coord_x, coord_y)) = board_shape.px_to_coord(mouse_x, mouse_y) {
+            let (circle_x, circle_y) = board_shape.coord_to_px(coord_x, coord_y);
+            draw_circle(
+                circle_x,
+                circle_y,
+                board_shape.get_circle_radius(),
+                pending_move_white,
+            );
         }
         next_frame().await
     }
