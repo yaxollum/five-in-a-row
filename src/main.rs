@@ -1,6 +1,7 @@
-use macroquad::prelude::*;
+mod game;
 
-const BOARD_SIZE: i32 = 15;
+use game::BOARD_SIZE;
+use macroquad::prelude::*;
 
 struct BoardShape {
     corner_x: f32,
@@ -51,14 +52,24 @@ async fn main() {
     let text_bottom = 40.0;
     let line_thickness = 2.0;
     let pending_move_white = Color::from_rgba(255, 255, 255, 100);
+    let pending_move_black = Color::from_rgba(0, 0, 0, 100);
+
+    let mut game = game::Game::new();
+
     loop {
         clear_background(background_color);
         draw_text(
-            "White's turn",
+            match game.get_current_player() {
+                game::Player::White => "White's turn",
+                game::Player::Black => "Black's turn",
+            },
             text_bottom / 2.0,
             text_bottom,
             text_bottom,
-            BLACK,
+            match game.get_current_player() {
+                game::Player::White => WHITE,
+                game::Player::Black => BLACK,
+            },
         );
         let board_shape = BoardShape::from_rect(0.0, text_bottom, screen_width(), screen_height());
         for i in 0..BOARD_SIZE {
@@ -73,13 +84,38 @@ async fn main() {
         }
         let (mouse_x, mouse_y) = mouse_position();
         if let Some((coord_x, coord_y)) = board_shape.px_to_coord(mouse_x, mouse_y) {
-            let (circle_x, circle_y) = board_shape.coord_to_px(coord_x, coord_y);
-            draw_circle(
-                circle_x,
-                circle_y,
-                board_shape.get_circle_radius(),
-                pending_move_white,
-            );
+            if game.get_cell(coord_x, coord_y).is_none() {
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    game.place_piece(coord_x, coord_y);
+                } else {
+                    let (circle_x, circle_y) = board_shape.coord_to_px(coord_x, coord_y);
+                    draw_circle(
+                        circle_x,
+                        circle_y,
+                        board_shape.get_circle_radius(),
+                        match game.get_current_player() {
+                            game::Player::White => pending_move_white,
+                            game::Player::Black => pending_move_black,
+                        },
+                    );
+                }
+            }
+        }
+        for i in 0..BOARD_SIZE {
+            for j in 0..BOARD_SIZE {
+                if let Some(player) = game.get_cell(i, j) {
+                    let (circle_x, circle_y) = board_shape.coord_to_px(i, j);
+                    draw_circle(
+                        circle_x,
+                        circle_y,
+                        board_shape.get_circle_radius(),
+                        match player {
+                            game::Player::White => WHITE,
+                            game::Player::Black => BLACK,
+                        },
+                    );
+                }
+            }
         }
         next_frame().await
     }
