@@ -1,3 +1,4 @@
+mod ai;
 mod game;
 
 use game::BOARD_SIZE;
@@ -46,6 +47,11 @@ impl BoardShape {
     }
 }
 
+enum Player {
+    Human,
+    Ai(Box<dyn ai::Ai>),
+}
+
 #[macroquad::main("BasicShapes")]
 async fn main() {
     let background_color = Color::from_rgba(245, 193, 71, 255);
@@ -56,6 +62,9 @@ async fn main() {
 
     let mut game = game::Game::new();
 
+    let white_player = Player::Human;
+    //let white_player = Player::Ai(Box::new(ai::RandomAi));
+    let black_player = Player::Ai(Box::new(ai::RandomAi));
     loop {
         clear_background(background_color);
         draw_text(
@@ -88,24 +97,38 @@ async fn main() {
             let (x2, y2) = board_shape.coord_to_px(BOARD_SIZE - 1, i);
             draw_line(x1, y1, x2, y2, line_thickness, BLACK);
         }
-        let (mouse_x, mouse_y) = mouse_position();
-        if let Some((coord_x, coord_y)) = board_shape.px_to_coord(mouse_x, mouse_y) {
-            if game.get_cell(coord_x, coord_y).is_none() {
-                if is_mouse_button_pressed(MouseButton::Left) {
-                    game.place_piece(coord_x, coord_y);
-                } else {
-                    let (circle_x, circle_y) = board_shape.coord_to_px(coord_x, coord_y);
-                    if let game::GameState::InProgress(current_player) = game.get_state() {
-                        draw_circle(
-                            circle_x,
-                            circle_y,
-                            board_shape.get_circle_radius(),
-                            match current_player {
-                                game::Player::White => pending_move_white,
-                                game::Player::Black => pending_move_black,
-                            },
-                        );
+        if let game::GameState::InProgress(current_player) = game.get_state() {
+            let current_player_obj = match current_player {
+                game::Player::Black => &black_player,
+                game::Player::White => &white_player,
+            };
+            match current_player_obj {
+                Player::Human => {
+                    let (mouse_x, mouse_y) = mouse_position();
+                    if let Some((coord_x, coord_y)) = board_shape.px_to_coord(mouse_x, mouse_y) {
+                        if game.get_cell(coord_x, coord_y).is_none() {
+                            if is_mouse_button_pressed(MouseButton::Left) {
+                                game.place_piece(coord_x, coord_y);
+                            } else {
+                                let (circle_x, circle_y) =
+                                    board_shape.coord_to_px(coord_x, coord_y);
+
+                                draw_circle(
+                                    circle_x,
+                                    circle_y,
+                                    board_shape.get_circle_radius(),
+                                    match current_player {
+                                        game::Player::White => pending_move_white,
+                                        game::Player::Black => pending_move_black,
+                                    },
+                                );
+                            }
+                        }
                     }
+                }
+                Player::Ai(ai) => {
+                    let (ai_x, ai_y) = ai.get_move(&game);
+                    game.place_piece(ai_x, ai_y);
                 }
             }
         }

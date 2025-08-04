@@ -2,7 +2,7 @@ pub const BOARD_SIZE: i32 = 15;
 
 const BOARD_SIZE_UZ: usize = BOARD_SIZE as usize;
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Player {
     White,
     Black,
