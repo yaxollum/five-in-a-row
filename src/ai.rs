@@ -34,10 +34,15 @@ impl Ai for NonconfrontationalAi {
                 }
             }
         }
-        (
-            rng.random_range(0..game::BOARD_SIZE),
-            rng.random_range(0..game::BOARD_SIZE),
-        )
+        loop {
+            let (move_x, move_y) = (
+                rng.random_range(0..game::BOARD_SIZE),
+                rng.random_range(0..game::BOARD_SIZE),
+            );
+            if g.get_cell(move_x, move_y).is_none() {
+                return (move_x, move_y);
+            }
+        }
     }
 }
 
