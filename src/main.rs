@@ -151,3 +151,45 @@ async fn main() {
         next_frame().await
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ai::Ai;
+
+    enum GameResult {
+        Winner(game::Player),
+        Tie,
+    }
+
+    fn run_game() -> GameResult {
+        let ai_obj: ai::RandomAi = ai::RandomAi;
+        let mut game = game::Game::new();
+        loop {
+            let (x, y) = ai_obj.get_move(&game);
+            game.place_piece(x, y);
+            match game.get_state() {
+                game::GameState::InProgress(_) => {}
+                game::GameState::Winner(player) => return GameResult::Winner(player),
+                game::GameState::Tie => return GameResult::Tie,
+            }
+        }
+    }
+    #[test]
+    fn test_game() {
+        let mut white_win = 0;
+        let mut black_win = 0;
+        let mut tie = 0;
+        for i in 1..=1000000 {
+            if i % 1000 == 0 {
+                println!("run #{}", i);
+            }
+            match run_game() {
+                GameResult::Winner(game::Player::White) => white_win += 1,
+                GameResult::Winner(game::Player::Black) => black_win += 1,
+                GameResult::Tie => tie += 1,
+            }
+        }
+        println!("{} {} {}", white_win, black_win, tie);
+    }
+}
