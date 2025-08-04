@@ -61,6 +61,9 @@ impl Game {
                             if (0..=4).all(|x| self.get_cell(i + x, j + x) == Some(player)) {
                                 return GameState::Winner(player);
                             }
+                            if (0..=4).all(|x| self.get_cell(i + x, j - x) == Some(player)) {
+                                return GameState::Winner(player);
+                            }
                         }
                     }
                 }
