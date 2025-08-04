@@ -19,14 +19,14 @@ impl Player {
 
 type Cell = Option<Player>;
 
-enum GameState {
-    InProgress,
+#[derive(Clone)]
+pub enum GameState {
+    InProgress(Player),
     Winner(Player),
     Tie,
 }
 
 pub struct Game {
-    current_player: Player,
     board: [[Cell; BOARD_SIZE_UZ]; BOARD_SIZE_UZ],
     state: GameState,
 }
@@ -34,36 +34,49 @@ pub struct Game {
 impl Game {
     pub fn new() -> Self {
         Self {
-            current_player: Player::Black,
             board: [[None; BOARD_SIZE_UZ]; BOARD_SIZE_UZ],
-            state: GameState::InProgress,
+            state: GameState::InProgress(Player::Black),
         }
     }
     pub fn get_cell(&self, i: i32, j: i32) -> Cell {
-        self.board[i as usize][j as usize]
+        self.board
+            .get(i as usize)
+            .and_then(|row| row.get(j as usize).copied().flatten())
     }
-    pub fn get_current_player(&self) -> Player {
-        self.current_player
+    pub fn get_state(&self) -> GameState {
+        self.state.clone()
     }
-    fn calc_state(&self) -> GameState {
-        for i in 0..BOARD_SIZE_UZ {
-            for j in 0..BOARD_SIZE_UZ {
-                if let Some(player) = self.board[i][j] {
-                    if self.board[i + 1][j] == Some(player) {
-                        return GameState::Winner(player);
+    fn calc_next_state(&self) -> GameState {
+        match self.state {
+            GameState::InProgress(current_player) => {
+                for i in 0..BOARD_SIZE {
+                    for j in 0..BOARD_SIZE {
+                        if let Some(player) = self.get_cell(i, j) {
+                            if (0..=4).all(|x| self.get_cell(i + x, j) == Some(player)) {
+                                return GameState::Winner(player);
+                            }
+                            if (0..=4).all(|x| self.get_cell(i, j + x) == Some(player)) {
+                                return GameState::Winner(player);
+                            }
+                            if (0..=4).all(|x| self.get_cell(i + x, j + x) == Some(player)) {
+                                return GameState::Winner(player);
+                            }
+                        }
                     }
                 }
+                GameState::InProgress(current_player.other())
             }
+            _ => self.state.clone(),
         }
-        GameState::InProgress
     }
     pub fn place_piece(&mut self, i: i32, j: i32) {
-        let i = i as usize;
-        let j = j as usize;
-        if self.board[i][j].is_none() {
-            self.board[i][j] = Some(self.current_player);
-            self.current_player = self.current_player.other();
-            self.state = self.calc_state();
+        if let GameState::InProgress(current_player) = self.state {
+            let i = i as usize;
+            let j = j as usize;
+            if self.board[i][j].is_none() {
+                self.board[i][j] = Some(current_player);
+                self.state = self.calc_next_state();
+            }
         }
     }
 }

@@ -59,16 +59,22 @@ async fn main() {
     loop {
         clear_background(background_color);
         draw_text(
-            match game.get_current_player() {
-                game::Player::White => "White's turn",
-                game::Player::Black => "Black's turn",
+            match game.get_state() {
+                game::GameState::InProgress(game::Player::White) => "White's turn",
+                game::GameState::InProgress(game::Player::Black) => "Black's turn",
+                game::GameState::Winner(game::Player::White) => "White wins!",
+                game::GameState::Winner(game::Player::Black) => "Black wins!",
+                game::GameState::Tie => "Tie!",
             },
             text_bottom / 2.0,
             text_bottom,
             text_bottom,
-            match game.get_current_player() {
-                game::Player::White => WHITE,
-                game::Player::Black => BLACK,
+            match game.get_state() {
+                game::GameState::InProgress(game::Player::White) => WHITE,
+                game::GameState::InProgress(game::Player::Black) => BLACK,
+                game::GameState::Winner(game::Player::White) => WHITE,
+                game::GameState::Winner(game::Player::Black) => BLACK,
+                game::GameState::Tie => GRAY,
             },
         );
         let board_shape = BoardShape::from_rect(0.0, text_bottom, screen_width(), screen_height());
@@ -89,15 +95,17 @@ async fn main() {
                     game.place_piece(coord_x, coord_y);
                 } else {
                     let (circle_x, circle_y) = board_shape.coord_to_px(coord_x, coord_y);
-                    draw_circle(
-                        circle_x,
-                        circle_y,
-                        board_shape.get_circle_radius(),
-                        match game.get_current_player() {
-                            game::Player::White => pending_move_white,
-                            game::Player::Black => pending_move_black,
-                        },
-                    );
+                    if let game::GameState::InProgress(current_player) = game.get_state() {
+                        draw_circle(
+                            circle_x,
+                            circle_y,
+                            board_shape.get_circle_radius(),
+                            match current_player {
+                                game::Player::White => pending_move_white,
+                                game::Player::Black => pending_move_black,
+                            },
+                        );
+                    }
                 }
             }
         }
