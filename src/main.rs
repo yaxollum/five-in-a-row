@@ -62,9 +62,9 @@ async fn main() {
 
     let mut game = game::Game::new();
 
-    let white_player = Player::Human;
+    let white_player = Player::Ai(Box::new(ai::NonconfrontationalAi));
     //let white_player = Player::Ai(Box::new(ai::RandomAi));
-    let black_player = Player::Ai(Box::new(ai::RandomAi));
+    let black_player = Player::Ai(Box::new(ai::NonconfrontationalAi));
     loop {
         clear_background(background_color);
         draw_text(
@@ -155,18 +155,21 @@ async fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ai::Ai;
 
     enum GameResult {
         Winner(game::Player),
         Tie,
     }
 
-    fn run_game() -> GameResult {
-        let ai_obj: ai::RandomAi = ai::RandomAi;
+    fn run_game<AiB: ai::Ai, AiW: ai::Ai>(ai_black: AiB, ai_white: AiW) -> GameResult {
         let mut game = game::Game::new();
         loop {
-            let (x, y) = ai_obj.get_move(&game);
+            let (x, y) = if let game::GameState::InProgress(game::Player::Black) = game.get_state()
+            {
+                ai_black.get_move(&game)
+            } else {
+                ai_white.get_move(&game)
+            };
             game.place_piece(x, y);
             match game.get_state() {
                 game::GameState::InProgress(_) => {}
@@ -180,16 +183,16 @@ mod tests {
         let mut white_win = 0;
         let mut black_win = 0;
         let mut tie = 0;
-        for i in 1..=1000000 {
+        for i in 1..=10000 {
             if i % 1000 == 0 {
                 println!("run #{}", i);
             }
-            match run_game() {
+            match run_game(ai::NonconfrontationalAi, ai::NonconfrontationalAi) {
                 GameResult::Winner(game::Player::White) => white_win += 1,
                 GameResult::Winner(game::Player::Black) => black_win += 1,
                 GameResult::Tie => tie += 1,
             }
         }
-        println!("{} {} {}", white_win, black_win, tie);
+        println!("{} {} {}", black_win, white_win, tie);
     }
 }

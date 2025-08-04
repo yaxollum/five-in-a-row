@@ -26,6 +26,7 @@ pub enum GameState {
     Tie,
 }
 
+#[derive(Clone)]
 pub struct Game {
     board: [[Cell; BOARD_SIZE_UZ]; BOARD_SIZE_UZ],
     state: GameState,
@@ -49,6 +50,7 @@ impl Game {
     fn calc_next_state(&self) -> GameState {
         match self.state {
             GameState::InProgress(current_player) => {
+                let mut board_is_full = true;
                 for i in 0..BOARD_SIZE {
                     for j in 0..BOARD_SIZE {
                         if let Some(player) = self.get_cell(i, j) {
@@ -64,10 +66,16 @@ impl Game {
                             if (0..=4).all(|x| self.get_cell(i + x, j - x) == Some(player)) {
                                 return GameState::Winner(player);
                             }
+                        } else {
+                            board_is_full = false;
                         }
                     }
                 }
-                GameState::InProgress(current_player.other())
+                if board_is_full {
+                    GameState::Tie
+                } else {
+                    GameState::InProgress(current_player.other())
+                }
             }
             _ => self.state.clone(),
         }
