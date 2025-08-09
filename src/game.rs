@@ -80,14 +80,16 @@ impl Game {
             _ => self.state.clone(),
         }
     }
-    pub fn place_piece(&mut self, i: i32, j: i32) {
+    pub fn place_piece(&mut self, i: i32, j: i32) -> Result<(), ()> {
         if let GameState::InProgress(current_player) = self.state {
             let i = i as usize;
             let j = j as usize;
             if self.board[i][j].is_none() {
                 self.board[i][j] = Some(current_player);
                 self.state = self.calc_next_state();
+                return Ok(());
             }
         }
+        Err(())
     }
 }

@@ -62,9 +62,9 @@ async fn main() {
 
     let mut game = game::Game::new();
 
-    let white_player = Player::Ai(Box::new(ai::NonconfrontationalAi));
+    let white_player = Player::Ai(Box::new(ai::SmartAi::new(12000000)));
     //let white_player = Player::Ai(Box::new(ai::RandomAi));
-    let black_player = Player::Ai(Box::new(ai::NonconfrontationalAi));
+    let black_player = Player::Human;
     loop {
         clear_background(background_color);
         draw_text(
@@ -108,7 +108,7 @@ async fn main() {
                     if let Some((coord_x, coord_y)) = board_shape.px_to_coord(mouse_x, mouse_y) {
                         if game.get_cell(coord_x, coord_y).is_none() {
                             if is_mouse_button_pressed(MouseButton::Left) {
-                                game.place_piece(coord_x, coord_y);
+                                game.place_piece(coord_x, coord_y).unwrap();
                             } else {
                                 let (circle_x, circle_y) =
                                     board_shape.coord_to_px(coord_x, coord_y);
@@ -128,7 +128,7 @@ async fn main() {
                 }
                 Player::Ai(ai) => {
                     let (ai_x, ai_y) = ai.get_move(&game);
-                    game.place_piece(ai_x, ai_y);
+                    game.place_piece(ai_x, ai_y).unwrap();
                 }
             }
         }
@@ -170,7 +170,7 @@ mod tests {
             } else {
                 ai_white.get_move(&game)
             };
-            game.place_piece(x, y);
+            game.place_piece(x, y).unwrap();
             match game.get_state() {
                 game::GameState::InProgress(_) => {}
                 game::GameState::Winner(player) => return GameResult::Winner(player),
