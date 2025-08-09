@@ -53,7 +53,7 @@ impl Ai for NonconfrontationalAi {
 }
 
 pub struct SmartAi {
-    max_search_count: i64,
+    search_quota: i64,
 }
 
 #[derive(Debug)]
@@ -71,8 +71,8 @@ struct SearchResult {
 }
 
 impl SmartAi {
-    pub fn new(max_search_count: i64) -> Self {
-        Self { max_search_count }
+    pub fn new(search_quota: i64) -> Self {
+        Self { search_quota }
     }
     fn search(g: &game::Game, search_quota: i64, rng: &mut rand::rngs::ThreadRng) -> SearchResult {
         if let game::GameState::InProgress(current_player) = g.get_state() {
@@ -82,7 +82,16 @@ impl SmartAi {
             let mut possible_moves: Vec<(i32, i32)> = (0..game::BOARD_SIZE)
                 .flat_map(|i| {
                     (0..game::BOARD_SIZE).filter_map(move |j| {
-                        if g.get_cell(i, j).is_none() {
+                        if g.get_cell(i, j).is_none()
+                            && (g.get_cell(i - 1, j - 1).is_some()
+                                || g.get_cell(i - 1, j).is_some()
+                                || g.get_cell(i - 1, j + 1).is_some()
+                                || g.get_cell(i, j - 1).is_some()
+                                || g.get_cell(i, j + 1).is_some()
+                                || g.get_cell(i + 1, j - 1).is_some()
+                                || g.get_cell(i + 1, j).is_some()
+                                || g.get_cell(i + 1, j + 1).is_some())
+                        {
                             Some((i, j))
                         } else {
                             None
@@ -166,7 +175,7 @@ impl SmartAi {
 impl Ai for SmartAi {
     fn get_move(&self, g: &game::Game) -> (i32, i32) {
         let mut rng = rand::rng();
-        let search_result = Self::search(g, self.max_search_count, &mut rng);
+        let search_result = Self::search(g, self.search_quota, &mut rng);
         println!("{:?}", search_result);
         search_result.best_move
     }

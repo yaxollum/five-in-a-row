@@ -1,8 +1,13 @@
 mod ai;
 mod game;
 
+use std::sync::mpsc::{channel, Receiver};
+use std::thread;
+
 use game::BOARD_SIZE;
 use macroquad::prelude::*;
+
+use crate::ai::Ai;
 
 struct BoardShape {
     corner_x: f32,
@@ -49,7 +54,26 @@ impl BoardShape {
 
 enum Player {
     Human,
-    Ai(Box<dyn ai::Ai>),
+    Ai,
+}
+
+struct AiWorker {
+    receiver: Receiver<(i32, i32)>,
+}
+
+impl AiWorker {
+    fn new(g: game::Game, search_quota: i64) -> Self {
+        let (sender, receiver) = channel::<(i32, i32)>();
+        thread::spawn(move || {
+            sender
+                .send(ai::SmartAi::new(search_quota).get_move(&g))
+                .unwrap();
+        });
+        Self { receiver }
+    }
+    fn get_move(&self) -> Option<(i32, i32)> {
+        self.receiver.try_recv().ok()
+    }
 }
 
 #[macroquad::main("BasicShapes")]
@@ -62,9 +86,10 @@ async fn main() {
 
     let mut game = game::Game::new();
 
-    let white_player = Player::Ai(Box::new(ai::SmartAi::new(12000000)));
+    let white_player = Player::Ai;
     //let white_player = Player::Ai(Box::new(ai::RandomAi));
     let black_player = Player::Human;
+    let mut ai_worker: Option<AiWorker> = None;
     loop {
         clear_background(background_color);
         draw_text(
@@ -126,9 +151,15 @@ async fn main() {
                         }
                     }
                 }
-                Player::Ai(ai) => {
-                    let (ai_x, ai_y) = ai.get_move(&game);
-                    game.place_piece(ai_x, ai_y).unwrap();
+                Player::Ai => {
+                    if let Some(worker) = &ai_worker {
+                        if let Some((ai_x, ai_y)) = worker.get_move() {
+                            game.place_piece(ai_x, ai_y).unwrap();
+                            ai_worker = None;
+                        }
+                    } else {
+                        ai_worker = Some(AiWorker::new(game.clone(), 1000000));
+                    }
                 }
             }
         }
